@@ -533,6 +533,10 @@ export default function Activity() {
                         placeholder="type 'help' or commands..." 
                         className="flex-grow bg-transparent border-none outline-none text-white placeholder:text-white/20 caret-brand-400 font-mono text-xs md:text-sm focus:ring-0 focus:outline-none p-0"
                         autoFocus
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="none"
+                        spellCheck="false"
                       />
                     </form>
                   </div>
