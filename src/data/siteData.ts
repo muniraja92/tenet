@@ -260,6 +260,11 @@ export interface StrategyBroadcast {
   linkedinUrl: string;
 }
 
+// To dynamically fetch your LinkedIn updates, generate a free RSS feed of your profile
+// (e.g., via RSS.app or FetchRSS) and paste the RSS URL inside the rss2json query below.
+// Leave empty to use the static fallback announcements.
+export const linkedinFeedUrl = ''; // Example: 'https://api.rss2json.com/v1/api.json?rss_url=https://rss.app/feeds/your_feed_id.xml'
+
 export const strategyBroadcasts: StrategyBroadcast[] = [
   {
     id: 'b1',

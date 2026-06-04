@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Github, Linkedin, ExternalLink, GitBranch, Calendar, Clock, Star, AlertCircle, Rss } from 'lucide-react';
-import { strategyBroadcasts } from '../data/siteData';
+import { strategyBroadcasts, linkedinFeedUrl, StrategyBroadcast } from '../data/siteData';
 
 interface GithubRepo {
   name: string;
@@ -43,6 +43,9 @@ export default function Activity() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
+  const [broadcasts, setBroadcasts] = useState<StrategyBroadcast[]>(strategyBroadcasts);
+  const [linkedinLoading, setLinkedinLoading] = useState(false);
+
   useEffect(() => {
     async function fetchRepos() {
       try {
@@ -70,6 +73,61 @@ export default function Activity() {
       }
     }
     fetchRepos();
+  }, []);
+
+  useEffect(() => {
+    if (!linkedinFeedUrl) return;
+
+    async function fetchLinkedIn() {
+      setLinkedinLoading(true);
+      try {
+        const response = await fetch(linkedinFeedUrl);
+        if (!response.ok) {
+          throw new Error('Failed to fetch LinkedIn feed');
+        }
+        const data = await response.json();
+        if (data.status === 'ok' && Array.isArray(data.items)) {
+          const cleanText = (html: string) => html.replace(/<[^>]*>/g, '').trim();
+          
+          const formatted: StrategyBroadcast[] = data.items.map((item: any, idx: number) => {
+            const content = cleanText(item.description || item.content || '');
+            
+            // Smart categorizer
+            let category: 'Strategic Directive' | 'Operational Update' | 'Milestone' = 'Strategic Directive';
+            const lowercaseContent = content.toLowerCase();
+            if (lowercaseContent.includes('milestone') || lowercaseContent.includes('launch') || lowercaseContent.includes('celebrat')) {
+              category = 'Milestone';
+            } else if (lowercaseContent.includes('update') || lowercaseContent.includes('release') || lowercaseContent.includes('agent') || lowercaseContent.includes('workflow')) {
+              category = 'Operational Update';
+            }
+
+            // Extract a clean short title from content if title is blank or too generic
+            let title = cleanText(item.title || '');
+            if (!title || title.length > 60 || title.startsWith('http')) {
+              const words = content.split(' ');
+              title = words.slice(0, 6).join(' ') + '...';
+            }
+
+            return {
+              id: `linkedin-${idx}`,
+              category,
+              date: item.pubDate ? new Date(item.pubDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short' }) : 'Recent',
+              title,
+              content: content.length > 280 ? content.slice(0, 277) + '...' : content,
+              linkedinUrl: item.link || 'https://www.linkedin.com/in/muniraja-pasupuleti-27637954/recent-activity/all/'
+            };
+          });
+          setBroadcasts(formatted.slice(0, 3));
+        }
+      } catch (err) {
+        console.error('Error fetching LinkedIn feed:', err);
+        setBroadcasts(strategyBroadcasts); // Fallback
+      } finally {
+        setLinkedinLoading(false);
+      }
+    }
+
+    fetchLinkedIn();
   }, []);
 
   const formatDate = (dateString: string) => {
@@ -117,50 +175,67 @@ export default function Activity() {
                 Strategy Broadcasts
               </h3>
               <span className="text-xs text-white/40 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5" /> Static feed
+                <Clock className="w-3.5 h-3.5" /> {linkedinFeedUrl ? 'Live sync' : 'Static feed'}
               </span>
             </div>
 
             <div className="space-y-6">
-              {strategyBroadcasts.map((broadcast) => (
-                <article 
-                  key={broadcast.id}
-                  className="card p-6 bg-surface-900/40 border border-white/[0.06] rounded-2xl hover:border-white/10 transition-all duration-300 relative group"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                    <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded border ${
-                      broadcast.category === 'Strategic Directive' 
-                        ? 'text-accent-pink bg-accent-pink/5 border-accent-pink/20'
-                        : broadcast.category === 'Operational Update'
-                        ? 'text-accent-cyan bg-accent-cyan/5 border-accent-cyan/20'
-                        : 'text-brand-400 bg-brand-400/5 border-brand-400/20'
-                    }`}>
-                      {broadcast.category}
-                    </span>
-                    <span className="text-xs text-white/40 flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5" />
-                      {broadcast.date}
-                    </span>
-                  </div>
-
-                  <h4 className="text-md font-bold text-white mb-2 group-hover:text-brand-300 transition-colors">
-                    {broadcast.title}
-                  </h4>
-                  <p className="text-sm text-white/60 leading-relaxed mb-4">
-                    {broadcast.content}
-                  </p>
-
-                  <a 
-                    href={broadcast.linkedinUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300 transition-colors"
+              {linkedinLoading ? (
+                // Skeleton loading state
+                <div className="space-y-6">
+                  {[1, 2].map((n) => (
+                    <div key={n} className="animate-pulse card p-6 bg-surface-900/40 border border-white/[0.06] rounded-2xl space-y-3">
+                      <div className="flex justify-between items-center">
+                        <div className="h-4 bg-white/10 rounded w-1/4" />
+                        <div className="h-4 bg-white/10 rounded w-1/6" />
+                      </div>
+                      <div className="h-5 bg-white/5 rounded w-3/4" />
+                      <div className="h-3 bg-white/5 rounded w-full" />
+                      <div className="h-3 bg-white/5 rounded w-5/6" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                broadcasts.map((broadcast) => (
+                  <article 
+                    key={broadcast.id}
+                    className="card p-6 bg-surface-900/40 border border-white/[0.06] rounded-2xl hover:border-white/10 transition-all duration-300 relative group"
                   >
-                    View strategy discussion on LinkedIn
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                </article>
-              ))}
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                      <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded border ${
+                        broadcast.category === 'Strategic Directive' 
+                          ? 'text-accent-pink bg-accent-pink/5 border-accent-pink/20'
+                          : broadcast.category === 'Operational Update'
+                          ? 'text-accent-cyan bg-accent-cyan/5 border-accent-cyan/20'
+                          : 'text-brand-400 bg-brand-400/5 border-brand-400/20'
+                      }`}>
+                        {broadcast.category}
+                      </span>
+                      <span className="text-xs text-white/40 flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5" />
+                        {broadcast.date}
+                      </span>
+                    </div>
+
+                    <h4 className="text-md font-bold text-white mb-2 group-hover:text-brand-300 transition-colors">
+                      {broadcast.title}
+                    </h4>
+                    <p className="text-sm text-white/60 leading-relaxed mb-4">
+                      {broadcast.content}
+                    </p>
+
+                    <a 
+                      href={broadcast.linkedinUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300 transition-colors"
+                    >
+                      View strategy discussion on LinkedIn
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </article>
+                ))
+              )}
             </div>
 
             {/* LinkedIn Connection CTA */}
