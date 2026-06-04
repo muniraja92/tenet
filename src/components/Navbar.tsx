@@ -71,6 +71,20 @@ const Navbar: React.FC = () => {
     };
   }, [mobileOpen]);
 
+  /* ------------------------------------------------------------------ */
+  /*  Close mobile menu on Escape key press                              */
+  /* ------------------------------------------------------------------ */
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMobileOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mobileOpen]);
+
   return (
     <header
       className={`fixed inset-x-0 top-0 z-50 transition-colors duration-300 border-b ${

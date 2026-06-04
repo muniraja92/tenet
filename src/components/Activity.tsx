@@ -66,6 +66,7 @@ export default function Activity() {
   ]);
 
   const terminalEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Fetch GitHub Repos
   useEffect(() => {
@@ -191,6 +192,8 @@ export default function Activity() {
             { type: 'output', text: '  agents       List active specialist agent workloads' },
             { type: 'output', text: '  ventures     Display TENET parent holding tree structure' },
             { type: 'output', text: '  broadcast    Print latest strategic directive details' },
+            { type: 'output', text: '  founder      Retrieve founder profile & credentials' },
+            { type: 'output', text: '  contact      List available touchpoints' },
             { type: 'output', text: '  clear        Clear the command terminal output' }
           ]);
           break;
@@ -242,6 +245,27 @@ export default function Activity() {
             { type: 'output', text: 'Hosting: Cloudflare Pages / Domain: tenet.is-a.dev' },
             { type: 'output', text: 'Execution structure: 100% agent coordinated.' },
             { type: 'output', text: 'Refer to LinkedIn strategy column for full articles.' }
+          ]);
+          break;
+        case 'founder':
+          setCliHistory([
+            ...newHistory,
+            { type: 'output', text: '[FOUNDER RECORD]' },
+            { type: 'output', text: 'Name:         Muniraja Pasupuleti' },
+            { type: 'output', text: 'Role:         Sole Decision Maker & Strategic Governor' },
+            { type: 'output', text: 'Expertise:    Artificial Intelligence, Large Language Models,' },
+            { type: 'output', text: '              Recommender Systems, Agentic Architectures' },
+            { type: 'output', text: 'Status:       Verifiably human.' }
+          ]);
+          break;
+        case 'contact':
+          setCliHistory([
+            ...newHistory,
+            { type: 'output', text: '[COMMUNICATION NODE DETAILS]' },
+            { type: 'output', text: 'Email:        fbi.muniraja@gmail.com' },
+            { type: 'output', text: 'WhatsApp:     https://wa.me/919502450501' },
+            { type: 'output', text: 'LinkedIn:     linkedin.com/in/muniraja-pasupuleti-27637954' },
+            { type: 'output', text: 'GitHub:       github.com/muniraja92' }
           ]);
           break;
         default:
@@ -424,7 +448,14 @@ export default function Activity() {
               </div>
 
               {/* Terminal Content Box */}
-              <div className="p-6 font-mono text-xs md:text-sm space-y-6 flex-grow overflow-y-auto max-h-[380px]">
+              <div 
+                className="p-6 font-mono text-xs md:text-sm space-y-6 flex-grow overflow-y-auto max-h-[380px] cursor-text"
+                onClick={() => {
+                  if (activeTab === 'cli') {
+                    inputRef.current?.focus();
+                  }
+                }}
+              >
                 
                 {/* TAB 1: WORKSPACES */}
                 {activeTab === 'workspaces' && (
@@ -527,6 +558,7 @@ export default function Activity() {
                     <form onSubmit={handleCommandSubmit} className="flex items-center gap-2 border-t border-white/[0.06] pt-4 mt-auto">
                       <span className="text-brand-400 font-bold select-none">$</span>
                       <input 
+                        ref={inputRef}
                         type="text" 
                         value={cliInput}
                         onChange={(e) => setCliInput(e.target.value)}

@@ -135,8 +135,12 @@ export default function Ventures() {
                   </div>
 
                   {/* Status badge */}
-                  <span className="flex-shrink-0 mt-1 inline-flex items-center text-[11px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full border border-accent-violet/30 bg-accent-violet/5 text-accent-violet">
-                    Future Vertical
+                  <span className={`flex-shrink-0 mt-1 inline-flex items-center text-[11px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full border ${
+                    venture.status === 'active'
+                      ? 'border-accent-cyan/30 bg-accent-cyan/5 text-accent-cyan'
+                      : 'border-accent-violet/30 bg-accent-violet/5 text-accent-violet'
+                  }`}>
+                    {venture.status === 'active' ? 'Active Vertical' : 'Future Vertical'}
                   </span>
                 </div>
 
