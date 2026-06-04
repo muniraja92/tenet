@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Github, Linkedin, ExternalLink, GitBranch, Calendar, Clock, Star, AlertCircle, Rss } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Github, Linkedin, ExternalLink, GitBranch, Calendar, Clock, Star, AlertCircle, Rss, Terminal as TerminalIcon } from 'lucide-react';
 import { strategyBroadcasts, linkedinFeedUrl, StrategyBroadcast } from '../data/siteData';
 
 interface GithubRepo {
@@ -38,14 +38,36 @@ const fallbackRepos: GithubRepo[] = [
   }
 ];
 
+interface CommandLine {
+  type: 'input' | 'output';
+  text: string;
+}
+
 export default function Activity() {
+  // Tabs: 'workspaces' | 'cli'
+  const [activeTab, setActiveTab] = useState<'workspaces' | 'cli'>('workspaces');
+
+  // GitHub Repos State
   const [repos, setRepos] = useState<GithubRepo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
+  // LinkedIn State
   const [broadcasts, setBroadcasts] = useState<StrategyBroadcast[]>(strategyBroadcasts);
   const [linkedinLoading, setLinkedinLoading] = useState(false);
 
+  // Terminal CLI State
+  const [cliInput, setCliInput] = useState('');
+  const [cliHistory, setCliHistory] = useState<CommandLine[]>([
+    { type: 'output', text: 'TENET Agent CLI [Version 1.0.0]' },
+    { type: 'output', text: '(c) 2026 TENET Core Command. Secure connection established.' },
+    { type: 'output', text: ' ' },
+    { type: 'output', text: 'Type "help" to view the available agentic operations.' }
+  ]);
+
+  const terminalEndRef = useRef<HTMLDivElement>(null);
+
+  // Fetch GitHub Repos
   useEffect(() => {
     async function fetchRepos() {
       try {
@@ -54,7 +76,6 @@ export default function Activity() {
           throw new Error('API limit hit or failed to fetch');
         }
         const data = await response.json();
-        // Map raw data to the format we need
         const formatted: GithubRepo[] = data.map((repo: any) => ({
           name: repo.name,
           description: repo.description,
@@ -75,6 +96,7 @@ export default function Activity() {
     fetchRepos();
   }, []);
 
+  // Fetch LinkedIn RSS
   useEffect(() => {
     if (!linkedinFeedUrl) return;
 
@@ -92,7 +114,6 @@ export default function Activity() {
           const formatted: StrategyBroadcast[] = data.items.map((item: any, idx: number) => {
             const content = cleanText(item.description || item.content || '');
             
-            // Smart categorizer
             let category: 'Strategic Directive' | 'Operational Update' | 'Milestone' = 'Strategic Directive';
             const lowercaseContent = content.toLowerCase();
             if (lowercaseContent.includes('milestone') || lowercaseContent.includes('launch') || lowercaseContent.includes('celebrat')) {
@@ -101,7 +122,6 @@ export default function Activity() {
               category = 'Operational Update';
             }
 
-            // Extract a clean short title from content if title is blank or too generic
             let title = cleanText(item.title || '');
             if (!title || title.length > 60 || title.startsWith('http')) {
               const words = content.split(' ');
@@ -121,7 +141,7 @@ export default function Activity() {
         }
       } catch (err) {
         console.error('Error fetching LinkedIn feed:', err);
-        setBroadcasts(strategyBroadcasts); // Fallback
+        setBroadcasts(strategyBroadcasts);
       } finally {
         setLinkedinLoading(false);
       }
@@ -129,6 +149,13 @@ export default function Activity() {
 
     fetchLinkedIn();
   }, []);
+
+  // Auto-scroll CLI to bottom
+  useEffect(() => {
+    if (activeTab === 'cli' && terminalEndRef.current) {
+      terminalEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [cliHistory, activeTab]);
 
   const formatDate = (dateString: string) => {
     try {
@@ -141,6 +168,90 @@ export default function Activity() {
     } catch {
       return dateString;
     }
+  };
+
+  // Handle CLI Command Execution
+  const handleCommandSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cmd = cliInput.trim().toLowerCase();
+    if (!cmd) return;
+
+    // Add command to history
+    const newHistory = [...cliHistory, { type: 'input' as const, text: `$ ${cliInput}` }];
+    setCliInput('');
+
+    // Generate command response
+    setTimeout(() => {
+      switch (cmd) {
+        case 'help':
+          setCliHistory([
+            ...newHistory,
+            { type: 'output', text: 'Available commands:' },
+            { type: 'output', text: '  status       Check agent network operational health' },
+            { type: 'output', text: '  agents       List active specialist agent workloads' },
+            { type: 'output', text: '  ventures     Display TENET parent holding tree structure' },
+            { type: 'output', text: '  broadcast    Print latest strategic directive details' },
+            { type: 'output', text: '  clear        Clear the command terminal output' }
+          ]);
+          break;
+        case 'clear':
+          setCliHistory([
+            { type: 'output', text: 'TENET Agent CLI [Version 1.0.0]' },
+            { type: 'output', text: 'Type "help" to view options.' }
+          ]);
+          break;
+        case 'status':
+          setCliHistory([
+            ...newHistory,
+            { type: 'output', text: '[SYSTEM HEALTH STATUS]' },
+            { type: 'output', text: 'Strategic governance layer: ONLINE (Founder: Muniraja P.)' },
+            { type: 'output', text: 'Agent master nodes:         10/10 operational' },
+            { type: 'output', text: 'Operational queue load:     12.8% (Optimal)' },
+            { type: 'output', text: 'Average execution latency:  18ms' },
+            { type: 'output', text: 'Security & Ethical audits:  PASSED' }
+          ]);
+          break;
+        case 'agents':
+          setCliHistory([
+            ...newHistory,
+            { type: 'output', text: '[SPECIALIST AGENTS ACTIVE ROUTERS]' },
+            { type: 'output', text: 'Strategy Agent    | IDLE      | Holding core directives' },
+            { type: 'output', text: 'Intake Agent      | MONITOR   | Scopes incoming briefs' },
+            { type: 'output', text: 'Development Agent | ACTIVE    | Building tenet.is-a.dev' },
+            { type: 'output', text: 'QA Agent          | MONITOR   | Verification checks complete' },
+            { type: 'output', text: 'Governance Agent  | AUDITING  | Audit trace checks' },
+            { type: 'output', text: 'Marketing Agent   | STANDBY   | SEO optimizations done' }
+          ]);
+          break;
+        case 'ventures':
+          setCliHistory([
+            ...newHistory,
+            { type: 'output', text: '[TENET ECOSYSTEM MAP]' },
+            { type: 'output', text: 'TENET (Command Hub)' },
+            { type: 'output', text: '├── TENET Labs (R&D, Agent prototyping)' },
+            { type: 'output', text: '├── TENET Works (Client delivery solutions)' },
+            { type: 'output', text: '├── TENET Systems (Core shared infrastructure)' },
+            { type: 'output', text: '└── TENET Ventures (Incubating agent verticals)' }
+          ]);
+          break;
+        case 'broadcast':
+          setCliHistory([
+            ...newHistory,
+            { type: 'output', text: '[DIRECTIVE: AUTONOMOUS HOLDING CONFIG]' },
+            { type: 'output', text: 'Initiating TENET infrastructure. Target cost: ₹0.' },
+            { type: 'output', text: 'Hosting: Cloudflare Pages / Domain: tenet.is-a.dev' },
+            { type: 'output', text: 'Execution structure: 100% agent coordinated.' },
+            { type: 'output', text: 'Refer to LinkedIn strategy column for full articles.' }
+          ]);
+          break;
+        default:
+          setCliHistory([
+            ...newHistory,
+            { type: 'output', text: `system: command not found: "${cmd}"` },
+            { type: 'output', text: 'Type "help" to see valid command options.' }
+          ]);
+      }
+    }, 100);
   };
 
   return (
@@ -261,109 +372,172 @@ export default function Activity() {
             </div>
           </div>
 
-          {/* RIGHT COLUMN: Active Codebases (GitHub) */}
+          {/* RIGHT COLUMN: Interactive Terminal (GitHub Workspaces & Agent CLI) */}
           <div className="space-y-8">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                <Github className="w-5 h-5 text-white" />
-                Active Workspaces
+                <TerminalIcon className="w-5 h-5 text-brand-400" />
+                Core Operations Panel
               </h3>
               <span className="text-xs text-white/40 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5" /> Live repository sync
+                <Clock className="w-3.5 h-3.5" /> {activeTab === 'workspaces' ? 'Sync: active' : 'Shell: active'}
               </span>
             </div>
 
             {/* Terminal Window container */}
-            <div className="rounded-2xl border border-white/[0.08] bg-surface-950/80 shadow-2xl overflow-hidden backdrop-blur-xl">
-              {/* Terminal Titlebar */}
-              <div className="flex items-center justify-between px-4 py-3 bg-surface-900/60 border-b border-white/[0.06] select-none">
+            <div className="rounded-2xl border border-white/[0.08] bg-surface-950/80 shadow-2xl overflow-hidden backdrop-blur-xl flex flex-col min-h-[440px]">
+              {/* Terminal Titlebar + Tab Switcher */}
+              <div className="flex flex-wrap items-center justify-between px-4 py-2.5 bg-surface-900/60 border-b border-white/[0.06] select-none gap-2">
                 <div className="flex items-center gap-1.5">
                   <span className="w-3 h-3 rounded-full bg-accent-pink/80" />
                   <span className="w-3 h-3 rounded-full bg-accent-yellow/80" />
                   <span className="w-3 h-3 rounded-full bg-brand-500/80" />
                 </div>
-                <span className="text-xs text-white/30 font-mono">system@tenet:~/workspaces</span>
-                <div className="w-12" /> {/* Spacer */}
+                
+                {/* Tab Switcher Buttons */}
+                <div className="flex bg-surface-950 border border-white/5 rounded-lg p-0.5 font-mono text-[11px]">
+                  <button 
+                    onClick={() => setActiveTab('workspaces')}
+                    className={`px-3 py-1 rounded-md transition-colors ${
+                      activeTab === 'workspaces' 
+                        ? 'bg-brand-500/20 text-brand-300 font-bold border border-brand-500/10' 
+                        : 'text-white/40 hover:text-white'
+                    }`}
+                  >
+                    📂 Workspaces
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('cli')}
+                    className={`px-3 py-1 rounded-md transition-colors ${
+                      activeTab === 'cli' 
+                        ? 'bg-brand-500/20 text-brand-300 font-bold border border-brand-500/10' 
+                        : 'text-white/40 hover:text-white'
+                    }`}
+                  >
+                    ⚡ Agent CLI
+                  </button>
+                </div>
+
+                <span className="text-[10px] text-white/30 font-mono hidden sm:inline">
+                  {activeTab === 'workspaces' ? 'system@tenet:~/workspaces' : 'system@tenet:~/agents-cli'}
+                </span>
               </div>
 
-              {/* Terminal Content */}
-              <div className="p-6 font-mono text-sm space-y-6 min-h-[380px]">
-                {loading ? (
-                  // Skeleton state
-                  <div className="space-y-6">
-                    {[1, 2, 3].map((n) => (
-                      <div key={n} className="animate-pulse space-y-2.5">
-                        <div className="h-4 bg-white/10 rounded w-1/3" />
-                        <div className="h-3 bg-white/5 rounded w-3/4" />
-                        <div className="h-3 bg-white/5 rounded w-1/2" />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <>
-                    <div className="space-y-5">
-                      {repos.map((repo) => (
-                        <div 
-                          key={repo.name} 
-                          className="group border-b border-white/[0.04] pb-4 last:border-0 last:pb-0"
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <a 
-                              href={repo.html_url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-brand-400 hover:text-brand-300 transition-colors font-semibold flex items-center gap-1.5 group-hover:translate-x-1 duration-200"
-                            >
-                              <GitBranch className="w-4 h-4 text-brand-400/80 shrink-0" />
-                              {repo.name}
-                            </a>
-                            <a 
-                              href={repo.html_url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-white/30 hover:text-white/60 transition-colors"
-                              aria-label={`View ${repo.name} code on GitHub`}
-                            >
-                              <ExternalLink className="w-3.5 h-3.5" />
-                            </a>
-                          </div>
-
-                          <p className="text-xs text-white/50 mt-1 leading-relaxed">
-                            {repo.description || 'No description provided.'}
-                          </p>
-
-                          <div className="flex flex-wrap items-center gap-4 text-[10px] text-white/30 mt-3 font-mono">
-                            {repo.language && (
-                              <span className="flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-brand-400" />
-                                {repo.language}
-                              </span>
-                            )}
-                            {repo.stargazers_count > 0 && (
-                              <span className="flex items-center gap-0.5">
-                                <Star className="w-3 h-3 text-accent-yellow" />
-                                {repo.stargazers_count}
-                              </span>
-                            )}
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              Sync: {formatDate(repo.updated_at)}
-                            </span>
-                          </div>
+              {/* Terminal Content Box */}
+              <div className="p-6 font-mono text-xs md:text-sm space-y-6 flex-grow overflow-y-auto max-h-[380px]">
+                
+                {/* TAB 1: WORKSPACES */}
+                {activeTab === 'workspaces' && (
+                  loading ? (
+                    <div className="space-y-6">
+                      {[1, 2, 3].map((n) => (
+                        <div key={n} className="animate-pulse space-y-2.5">
+                          <div className="h-4 bg-white/10 rounded w-1/3" />
+                          <div className="h-3 bg-white/5 rounded w-3/4" />
+                          <div className="h-3 bg-white/5 rounded w-1/2" />
                         </div>
                       ))}
                     </div>
+                  ) : (
+                    <>
+                      <div className="space-y-5">
+                        {repos.map((repo) => (
+                          <div 
+                            key={repo.name} 
+                            className="group border-b border-white/[0.04] pb-4 last:border-0 last:pb-0"
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <a 
+                                href={repo.html_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-brand-400 hover:text-brand-300 transition-colors font-semibold flex items-center gap-1.5 group-hover:translate-x-1 duration-200"
+                              >
+                                <GitBranch className="w-4 h-4 text-brand-400/80 shrink-0" />
+                                {repo.name}
+                              </a>
+                              <a 
+                                href={repo.html_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-white/30 hover:text-white/60 transition-colors"
+                                aria-label={`View ${repo.name} code on GitHub`}
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            </div>
 
-                    {error && (
-                      <div className="p-3 bg-accent-yellow/5 border border-accent-yellow/20 rounded-xl text-xs text-accent-yellow flex items-start gap-2 select-none">
-                        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                        <div>
-                          <strong>API Limit / Network Notice:</strong> Displaying static fallback repository listings. Visit GitHub for live workspace updates.
-                        </div>
+                            <p className="text-xs text-white/50 mt-1 leading-relaxed font-sans">
+                              {repo.description || 'No description provided.'}
+                            </p>
+
+                            <div className="flex flex-wrap items-center gap-4 text-[10px] text-white/30 mt-3 font-mono">
+                              {repo.language && (
+                                <span className="flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-brand-400" />
+                                  {repo.language}
+                                </span>
+                              )}
+                              {repo.stargazers_count > 0 && (
+                                <span className="flex items-center gap-0.5">
+                                  <Star className="w-3 h-3 text-accent-yellow" />
+                                  {repo.stargazers_count}
+                                </span>
+                              )}
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                Sync: {formatDate(repo.updated_at)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    )}
-                  </>
+
+                      {error && (
+                        <div className="p-3 bg-accent-yellow/5 border border-accent-yellow/20 rounded-xl text-xs text-accent-yellow flex items-start gap-2 select-none">
+                          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                          <div>
+                            <strong>API Notice:</strong> Displaying fallback repo data listings. Connect to GitHub for active workspace branches.
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )
                 )}
+
+                {/* TAB 2: INTERACTIVE AGENT CLI */}
+                {activeTab === 'cli' && (
+                  <div className="flex flex-col h-full justify-between min-h-[300px]">
+                    <div className="space-y-2 mb-4">
+                      {cliHistory.map((line, idx) => (
+                        <div 
+                          key={idx} 
+                          className={`whitespace-pre-wrap leading-relaxed ${
+                            line.type === 'input' 
+                              ? 'text-white font-bold' 
+                              : 'text-white/60 font-medium'
+                          }`}
+                        >
+                          {line.text}
+                        </div>
+                      ))}
+                      <div ref={terminalEndRef} />
+                    </div>
+
+                    <form onSubmit={handleCommandSubmit} className="flex items-center gap-2 border-t border-white/[0.06] pt-4 mt-auto">
+                      <span className="text-brand-400 font-bold select-none">$</span>
+                      <input 
+                        type="text" 
+                        value={cliInput}
+                        onChange={(e) => setCliInput(e.target.value)}
+                        placeholder="type 'help' or commands..." 
+                        className="flex-grow bg-transparent border-none outline-none text-white placeholder:text-white/20 caret-brand-400 font-mono text-xs md:text-sm focus:ring-0 focus:outline-none p-0"
+                        autoFocus
+                      />
+                    </form>
+                  </div>
+                )}
+
               </div>
             </div>
 
